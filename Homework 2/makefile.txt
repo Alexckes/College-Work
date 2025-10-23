@@ -1,0 +1,34 @@
+CCFLAGS = -Wall
+
+GreenBox.exe: main.o Customer.o Customers.o Movie.o Game.o Ent_Item.o Ent_Items.o Loan.o Loans.o
+	g++ main.o Customer.o Movie.o Game.o Ent_Item.o Ent_Items.o Loan.o Loans.o -o GreenBox.exe
+
+main.o: main.cpp
+	g++ $(CCFLAGS) -c main.cpp
+
+Customer.o: Customer.cpp
+	g++ $(CCFLAGS) -c Customer.cpp
+
+Customers.o: Customers.cpp
+	g++ $(CCFLAGS) -c Customers.cpp
+
+Movie.o: Movie.cpp
+	g++ $(CCFLAGS) -c Movie.cpp
+
+Game.o: Game.cpp
+	g++ $(CCFLAGS) -c Game.cpp
+
+Ent_Item.o: Ent_Item.cpp
+	g++ $(CCFLAGS) -c Ent_Item.cpp
+
+Ent_Items.o: Ent_Items.cpp
+	g++ $(CCFLAGS) -c Ent_Items.cpp
+
+Loan.o: Loan.cpp
+	g++ $(CCFLAGS) -c Loan.cpp
+
+Loans.o: Loans.cpp
+	g++ $(CCFLAGS) -c Loans.cpp
+
+clean:
+	rm *.o GreenBox.exe
