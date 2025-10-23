@@ -1,0 +1,3 @@
+sed -E -n '/^(.)(.)(.)\3\2\1$/p' palindrome
+
+awk -F "," '{if($5 >= 50000 && $4 == 2018) print $1,$2,$5}' salaries.csv
