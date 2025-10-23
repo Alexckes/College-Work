@@ -1,0 +1,7 @@
+To compilt and execute each program assignment, type 'gcc Q#.c -o [whatever]' to compile,
+then './[whatever]' to execute each program.
+# is the problem number the program is for.
+
+When prompted to enter a value for a variable in the problem, type out an appropriate value and hit enter.
+The solution should be then printed out.
+

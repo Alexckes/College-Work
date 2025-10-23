@@ -1,0 +1,133 @@
+import java_cup.runtime.*;
+
+terminal ID;
+terminal INTEGER;
+terminal LESS_THAN, LESS_THAN_EQUAL, GREATER_THAN, GREATER_THAN_EQUAL, EQ, EQEQ, NOT_EQ, AND, OR, NOT;
+terminal PLUS, MINUS;
+terminal TIMES, DIVIDE;
+terminal SEMICOLON, PERIOD, COMMA, PARENTHESESLEFT, PARENTHESESRIGHT, BRACESLEFT, BRACESRIGHT, BRACKETSLEFT, BRACKETSRIGHT;
+terminal WHILE, IMPORT, JAVA, UTIL, CLASS, PUBLIC, STATIC, VOID, MAIN, STRING, INT, NEW, SYSTEM, OUT, PRINTLN, RETURN, SCANNER, IN, ARGS, NEXTINT, IF, ELSE, THIS, BOOLEAN, TRUE, FALSE;
+
+non terminal program;
+non terminal importer;
+non terminal method;
+non terminal methodList;
+non terminal staticVars;
+non terminal parameters;
+non terminal callParameters;
+non terminal constDecl;
+non terminal constAssignmentList;
+non terminal statement;
+non terminal statementList;
+non terminal specifier;
+non terminal array;
+non terminal instantiation;
+non terminal condition;
+non terminal conditionalModifier;
+non terminal expression;
+non terminal relation;
+non terminal term;
+non terminal addingOperator;
+non terminal factor;
+non terminal multiplyingOperator;
+non terminal string;
+non terminal print;
+
+precedence right EQ;
+precedence left OR;
+precedence left AND;
+precedence left EQEQ, NOT_EQ;
+precedence left LESS_THAN, LESS_THAN_EQUAL, GREATER_THAN, GREATER_THAN_EQUAL;
+precedence left PLUS, MINUS;
+precedence left TIMES, DIVIDE;
+precedence right NEW;
+precedence left PARENTHESESLEFT, PARENTHESESRIGHT, BRACESLEFT, BRACESRIGHT;
+
+start with program;
+
+program ::= CLASS ID BRACKETSRIGHT methodList BRACKETSLEFT ;
+
+importer ::= IMPORT JAVA PERIOD UTIL PERIOD ID SEMICOLON ;
+
+method ::= PUBLIC STATIC VOID MAIN PARENTHESESRIGHT STRING ARGS BRACESRIGHT BRACESLEFT PARENTHESESLEFT BRACKETSRIGHT statementList BRACKETSLEFT
+ | PUBLIC STATIC specifier ID PARENTHESESRIGHT parameters PARENTHESESLEFT BRACKETSRIGHT statementList BRACKETSLEFT
+ | PUBLIC specifier ID PARENTHESESRIGHT parameters PARENTHESESLEFT BRACKETSRIGHT statementList BRACKETSLEFT
+ | PUBLIC specifier ID PARENTHESESRIGHT PARENTHESESLEFT BRACKETSRIGHT statementList BRACKETSLEFT
+
+ | ;
+
+methodList ::= method | methodList method | staticVars | methodList staticVars | statement | methodList statement ;
+
+staticVars ::= STATIC statement 
+ | STATIC SCANNER IN EQ NEW SCANNER PARENTHESESRIGHT SYSTEM PERIOD IN PARENTHESESLEFT
+ | ;
+
+parameters ::= specifier ID | parameters COMMA specifier ID ;
+
+callParameters ::= term | callParameters COMMA term ;
+
+statement ::= ID EQ expression
+ | IF PARENTHESESRIGHT condition PARENTHESESLEFT BRACKETSRIGHT statementList BRACKETSLEFT
+ | WHILE PARENTHESESRIGHT condition PARENTHESESLEFT BRACKETSRIGHT statementList BRACKETSLEFT
+ | specifier ID BRACKETSRIGHT BRACKETSLEFT EQ NEW specifier BRACKETSRIGHT term BRACKETSLEFT
+ | specifier ID
+ | ELSE IF PARENTHESESRIGHT condition PARENTHESESLEFT BRACKETSRIGHT statementList BRACKETSLEFT
+ | ELSE BRACKETSRIGHT statementList BRACKETSLEFT
+ | RETURN ID
+ | ID EQ IN PERIOD NEXTINT PARENTHESESRIGHT PARENTHESESLEFT
+ | ID EQ ID PARENTHESESRIGHT callParameters PARENTHESESLEFT
+ | IF PARENTHESESRIGHT condition PARENTHESESLEFT statement
+ | ELSE statement
+ | ELSE IF PARENTHESESRIGHT condition PARENTHESESLEFT statement
+ | ID ID
+ | ID EQ NEW ID PARENTHESESRIGHT PARENTHESESLEFT
+ | ;
+
+statementList ::= statement | statementList SEMICOLON statement ;
+
+specifier ::= STRING
+ | INT
+ | BOOLEAN
+ | ;
+
+array ::= ID BRACESRIGHT term BRACESLEFT
+ | ;
+
+condition ::= expression relation expression
+ | condition conditionalModifier condition
+ | ;
+
+conditionalModifier ::= AND
+ | OR
+ | ;
+
+relation ::= EQEQ | EQ | NOT_EQ
+ | LESS_THAN
+ | GREATER_THAN
+ | LESS_THAN_EQUAL
+ | GREATER_THAN_EQUAL 
+ | ;
+
+expression ::= term 
+ | addingOperator term 
+ | expression addingOperator term 
+ | 
+ | ;
+
+addingOperator ::= PLUS | MINUS ;
+
+term ::= factor | term multiplyingOperator factor ;
+
+multiplyingOperator ::= TIMES | DIVIDE ;
+
+print ::= SYSTEM PERIOD OUT PERIOD PRINTLN PARENTHESESRIGHT term PARENTHESESLEFT ;
+
+factor ::= ID | INTEGER | PARENTHESESLEFT expression PARENTHESESRIGHT | array 
+ | ID PARENTHESESRIGHT callParameters PARENTHESESLEFT
+ | THIS PERIOD ID
+ | TRUE
+ | FALSE
+ | ID PERIOD ID
+ | ID PERIOD array
+ | THIS PERIOD array
+ | ;

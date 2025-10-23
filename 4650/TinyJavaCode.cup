@@ -1,0 +1,514 @@
+import java_cup.runtime.*;
+import java.util.*;
+
+action code {: SymbolTable currentEnv, env; :};
+
+
+terminal String ID;
+terminal String INTEGER;
+terminal String AND, OR, NOT;
+terminal String LT, LE, GT, GE, EQ, NE;
+terminal String PLUS, MINUS, TIMES, SLASH;
+terminal SEMICOLON, DOT, COMMA;
+terminal LPAREN, RPAREN, LBRACK, RBRACK, LBRACE, RBRACE, ASSIGN;
+terminal ARGS, BOOLEAN, CLASS, ELSE, FALSE, IF, IMPORT, IN, INT, JAVA, MAIN;
+terminal NEXTINT, NEW, OUT, PRINTLN, PUBLIC, RETURN, SCANNER, STATIC, STRING; 
+terminal SYSTEM, THIS, TRUE, UTIL, VOID, WHILE;
+
+non terminal Code program;
+non terminal String classDefinitionList;
+non terminal String classDefinition;
+non terminal String[] memberList;
+non terminal ExpressionCode memberDeclaration;
+non terminal Declarator memberDeclarator;
+non terminal ExpressionCode functionDefinition;
+non terminal String functionDeclaration;
+non terminal String variableDeclarationList;
+non terminal Declarator variableOrArrayDeclaration;
+non terminal Declarator variableDeclaration;
+non terminal ArrayDeclarator arrayDeclaration;
+non terminal Integer subscriptDeclarationList;
+non terminal mainDeclaration;
+non terminal Type type;
+non terminal LinkedList<Type> argumentDeclarationListOption;
+non terminal LinkedList<Type> argumentDeclarationList;
+non terminal Declarator argumentDeclaration;
+non terminal String compoundStatement;
+non terminal String statementList;
+non terminal String statement;
+non terminal String whileLabel;
+non terminal String elseLabel;
+non terminal ConditionCode condition;
+non terminal String assignmentStatement;
+non terminal String returnStatementOption;
+non terminal ConditionCode elseOption;
+non terminal ExpressionCode[] expressionListOption;
+non terminal ExpressionCode[] expressionList;
+non terminal ExpressionCode expression;
+non terminal ConditionCode andExpression;
+non terminal ConditionCode relationalExpression;
+non terminal ExpressionCode term;
+non terminal ExpressionCode factor;
+non terminal ExpressionCode primaryExpression;
+non terminal String addingOperator;
+non terminal String multiplyingOperator;
+non terminal String relationalOperator;
+non terminal String unaryOperator;
+non terminal ExpressionCode object;
+non terminal ExpressionCode variable;
+non terminal String subscriptList;
+non terminal ExpressionCode functionCall;
+non terminal String classId;
+non terminal String objectId;
+non terminal String functionId;
+
+start with program;
+
+program ::= 
+    IMPORT JAVA DOT UTIL DOT TIMES SEMICOLON 
+    {: env = new SymbolTable (null); /* start new scope */ 
+	Code . initLabel ();
+	Code . initTemp (); :}
+    classDefinitionList:code {: 
+	code = code.replaceAll("null","");
+	RESULT = new Code (env, code); :} ;
+
+classDefinitionList ::= classDefinition:code 
+    {: RESULT = code; :}
+  | classDefinitionList:code classDefinition:newCode 
+    {: RESULT = code + newCode; :} ;
+
+classDefinition ::= 
+    CLASS classId:id LBRACE 
+    {:
+      currentEnv = env;                   /* save current env */
+      env = new SymbolTable (currentEnv); /* start new scope */
+      currentEnv . enterClass (id, env);
+    :}
+    memberList:memCode RBRACE 
+    {:
+      String code = "#include <stdio.h>\n\n";
+      if(memCode[0] != ""){
+	if(id != "main" || id != "Test1" || id != "Test2" || id != "Test3" || id != "Test4" || 
+	id != "Test5" || id != "Test6")
+	  code += "typedef struct {\n" + memCode[0] + "} " + id + ";\n";
+	else
+	  code += memCode[0];
+      }
+      code += memCode[1];
+      RESULT = code;
+      env = env . parent (); /* restore env */
+    :} ;
+
+memberList ::= memberList:memCode memberDeclaration:decCode 
+    {: 
+	if(decCode . place() == "member")
+	  memCode[0] = memCode[0] + decCode . code ();
+	if(decCode . place() == "function")
+	  memCode[1] = memCode[1] + decCode . code();
+	RESULT = memCode;
+    :} | {: RESULT = new String[] {"",""}; :} ;
+
+memberDeclaration ::= 
+    memberDeclarator:decl SEMICOLON 
+    {: RESULT =  new ExpressionCode(decl.type().toCode1() + " " + decl.id() +
+       " " + decl.type().toCode2() + ";\n","member"); :}
+  | functionDefinition:funcDefCode 
+    {: RESULT = funcDefCode; :} ;
+
+memberDeclarator ::= 
+    STATIC variableOrArrayDeclaration:decl 
+    {:
+      env . enterVar (decl . id (), decl . type (), true);
+      RESULT = decl;
+    :}
+  | variableOrArrayDeclaration:decl 
+    {:
+      env . enterVar (decl . id (), decl . type (), false);
+      RESULT = decl;
+    :} ;
+
+functionDefinition ::= 
+    functionDeclaration:funcId 
+    LBRACE variableDeclarationList:varDecListCode statementList:stmtListCode
+    returnStatementOption:retStmtOpCode RBRACE 
+    {:
+      String classic = "";
+      if(currentEnv.parent().parent() != null)
+	classic = "_List";
+      String code = "\n" + currentEnv . entry (funcId) . type () 
+      + " " + classic + funcId + " (int* _formal) {\n" + varDecListCode 
+      + stmtListCode + retStmtOpCode + "}\n";
+      currentEnv . enterFuncCode (funcId, code); /* add code to function entry */
+      env = env . parent (); /* restore env */
+      RESULT = new ExpressionCode(code,"function");
+    :}
+  | functionDeclaration:funcId 
+    LBRACE statementList:stmtListCode returnStatementOption:retStmtOp RBRACE 
+    {:
+      String classic = "";
+      if(currentEnv.hasEntry("List"))
+	classic = "_List";
+      String code = "\n" + currentEnv . entry (funcId) . type () 
+      + " " + classic + funcId + " (int* _formal) {\n" +
+      stmtListCode + retStmtOp + "}\n";
+      currentEnv . enterFuncCode (funcId, code); /* add code to function entry */
+      env = env . parent (); /* restore env */
+      RESULT = new ExpressionCode(code,"function");
+    :}
+  | functionDeclaration:funcId 
+    LBRACE variableDeclarationList:varDecListCode returnStatementOption:retStmtOpCode RBRACE 
+    {:
+      String classic = "";
+      if(currentEnv.hasEntry("List"))
+	classic = "_List";
+      String code = "\n" + currentEnv . entry (funcId) . type () 
+      + " " + classic + funcId + " (int* _formal) {\n" + varDecListCode 
+      + retStmtOpCode + "}\n";
+      currentEnv . enterFuncCode (funcId, code); /* add code to function entry */
+      env = env . parent (); /* restore env */
+      RESULT = new ExpressionCode(code,"function");
+    :}
+  | functionDeclaration:funcId LBRACE returnStatementOption:retStmtOpCode RBRACE 
+    {:
+      String classic = "";
+      if(currentEnv.hasEntry("List"))
+	classic = "_List";
+      String code = "\n" + currentEnv . entry (funcId) . type () 
+      + " " + classic + funcId + " (int* _formal) {\n" + retStmtOpCode + "}\n";
+      currentEnv . enterFuncCode (funcId, code); /* add code to function entry */
+      env = env . parent (); /* restore env */
+      RESULT = new ExpressionCode(code,"function");
+    :} ;
+
+functionDeclaration ::= 
+    PUBLIC type:type functionId:id 
+    {:
+      currentEnv = env;                   /* save current env */
+      env = new SymbolTable (currentEnv); /* start new scope */
+    :}
+    LPAREN argumentDeclarationListOption:argTypes RPAREN
+    {:
+      /* to allow recursive calls */
+      currentEnv . enterFunc (id, type, false, argTypes, env); 
+      RESULT = id;
+    :}
+  | PUBLIC STATIC type:type functionId:id 
+    {: 
+      currentEnv = env;                   /* save current env */
+      env = new SymbolTable (currentEnv); /* start new scope */
+    :}
+    LPAREN argumentDeclarationListOption:argTypes RPAREN
+    {:
+      /* to allow recursive calls */
+      currentEnv . enterFunc (id, type, true, argTypes, env); 
+      RESULT = id;
+    :}
+  | STATIC SCANNER IN ASSIGN NEW SCANNER LPAREN SYSTEM DOT IN RPAREN SEMICOLON
+     mainDeclaration 
+    {:
+      currentEnv . enterFunc ("main", new VoidType (), true, 
+        new LinkedList<Type> (), env); 
+      RESULT = "main";
+    :} 
+  | mainDeclaration 
+    {:
+      currentEnv . enterFunc ("main", new VoidType (), true, 
+        new LinkedList<Type> (), env); 
+      RESULT = "main";
+    :} ;
+
+variableDeclarationList ::= 
+    variableDeclarationList:varDecListCode variableOrArrayDeclaration:decl SEMICOLON 
+    {:
+      env . enterVar (decl . id (), decl . type ());
+      RESULT = varDecListCode + decl . type () + " " + decl . id () + ";\n";
+    :}
+  | variableOrArrayDeclaration:decl SEMICOLON 
+    {:
+      env . enterVar (decl . id (), decl . type ());
+      RESULT = decl . type () + " " + decl . id () + ";\n";
+    :} ;
+
+variableOrArrayDeclaration ::= 
+    variableDeclaration:decl 	{: RESULT = decl; :}
+  | arrayDeclaration:decl 	
+    {: if (decl . subscriptNumber () > 1)
+         ErrorMessage . print ("Too few subscripts in initialization");
+       else if (decl . subscriptNumber () < 1)
+         ErrorMessage . print ("Too many subscripts in initialization");
+       RESULT = decl; 
+    :} ;
+
+variableDeclaration ::= 
+    type:type objectId:id
+    {:
+      RESULT = new Declarator (id, type);
+    :} ;
+
+arrayDeclaration ::=
+    arrayDeclaration:decl LBRACK INTEGER:dimension RBRACK 
+    {:
+      RESULT = new ArrayDeclarator (decl . id (),
+        new ArrayType (Integer . parseInt (dimension), decl . type ()),
+        decl . subscriptNumber () - 1);
+    :}
+  | variableDeclaration:decl subscriptDeclarationList:subscriptNumber 
+      ASSIGN NEW INT LBRACK INTEGER:dimension RBRACK 
+    {:
+      RESULT = new ArrayDeclarator (decl . id (),
+        new ArrayType (Integer . parseInt (dimension), decl . type ()),
+        subscriptNumber . intValue ());
+    :} ;
+
+subscriptDeclarationList ::= 
+    subscriptDeclarationList:subscriptNumber LBRACK RBRACK 
+    {: RESULT = new Integer (subscriptNumber . intValue() + 1); :}
+  | LBRACK RBRACK {: RESULT = new Integer (1); :} ;
+
+mainDeclaration ::= 
+    PUBLIC STATIC VOID MAIN LPAREN STRING ARGS LBRACK RBRACK RPAREN 
+    {:
+      currentEnv = env;                   /* save current env */
+      env = new SymbolTable (currentEnv); /* start new scope */
+    :} ;
+
+type ::= 
+    classId:id 	{: RESULT = new ObjectType (id, env . entry (id)); :}
+  | INT 	{: RESULT = new IntegerType (); :}
+  | BOOLEAN 	{: RESULT = new BooleanType (); :} ;
+
+argumentDeclarationListOption ::= 
+    argumentDeclarationList:argTypes {: RESULT = argTypes; :} 
+  | {: RESULT = new LinkedList<Type> (); :} ;
+
+argumentDeclarationList ::= 
+    argumentDeclarationList:argTypes COMMA argumentDeclaration:decl
+    {:
+      env . enterVar (decl . id (), decl . type ());
+      argTypes . add (decl . type ());
+      RESULT = argTypes;
+    :}
+  | argumentDeclaration:decl 
+    {:
+      env . enterVar (decl . id (), decl . type ());
+      RESULT = new LinkedList<Type> ();
+      RESULT . add (decl . type ());
+    :} ;
+
+argumentDeclaration ::= variableDeclaration:decl 
+    {: RESULT = new Declarator (decl . id (), decl . type ()); :}
+  | argumentDeclaration:decl LBRACK RBRACK
+    {: 
+      RESULT = new ArrayDeclarator (decl . id (),
+        new ArrayType (0, decl . type ()), 0);
+    :} ;
+
+compoundStatement ::= LBRACE statementList:stmtListCode RBRACE 
+    {: RESULT = "{\n" + stmtListCode + "}\n"; :} ;
+
+statementList ::= statementList:stmtListCode statement:stmtCode
+    {: RESULT = stmtListCode + stmtCode; :}
+  | statement:stmt 
+    {: RESULT = stmt; :} ;
+
+statement ::= compoundStatement:compStmtCode 
+    {: RESULT = compStmtCode; :}
+  | assignmentStatement:assCode SEMICOLON 
+    {: RESULT = assCode; :}
+  | IF LPAREN condition:condCode RPAREN statement:stmtCode elseOption:elseOpCode
+    {: 
+	RESULT = condCode . code () + stmtCode + elseOpCode + ":\n";
+    :}
+  | WHILE whileLabel:loopEntryLabel LPAREN condition:condCode RPAREN statement:stmtCode
+    {:
+	String loopExitLabel = condCode . falseLabel ();
+	RESULT = loopEntryLabel + ":\n"
+	  + condCode . code ()
+	  + stmtCode
+	  + " goto " + loopEntryLabel + ";\n"
+	  + loopExitLabel + ":\n";
+    :} 
+  | SYSTEM DOT OUT DOT PRINTLN LPAREN expression:exprCode RPAREN SEMICOLON 
+    {:
+	RESULT = exprCode . code () + "printf(%d, " + exprCode . place () + ");\n";
+    :} ;
+
+assignmentStatement ::= variable:varCode ASSIGN expression:exprCode
+    {: RESULT = exprCode . code() + varCode . code()
+	+ varCode.place() + " = " + exprCode.place() + ";\n"; :} 
+  | variable:varCode ASSIGN NEW classId:cId LPAREN RPAREN 
+    {: RESULT = varCode . code() + cId + " " + varCode . place() + ";\n"; :}
+  | variable:varCode ASSIGN IN DOT NEXTINT LPAREN RPAREN 
+    {: RESULT = varCode . code () + "scanf (\"%d\", &" + varCode . place() + ");\n"; :} ;
+
+returnStatementOption ::= RETURN expression:exprCode SEMICOLON 
+    {: RESULT = "return " + exprCode . place () + ";\n"; :} | {: RESULT = ""; :} ;
+
+elseOption ::= ELSE elseLabel:elseLab statement:stmtCode 
+    {: RESULT = new ConditionCode(stmtCode + elseLab + ":\n",elseLab,"");; :} 
+  | {: RESULT = new ConditionCode("","",""); :} ;
+
+elseLabel ::= {: RESULT = Code . newLabel (); :} ;
+
+whileLabel ::= {: RESULT = Code . newLabel (); :} ;
+
+expressionListOption ::= expressionList:exprListCode
+    {: RESULT = exprListCode; :} | {: RESULT = new ExpressionCode [0]; :} ;
+
+expressionList ::= expressionList:exprListCode COMMA expression:exprCode 
+    {: int l = exprListCode . length + 1;
+	ExpressionCode [] exprList = new ExpressionCode [l];
+	for(int i = 0; i < l - 1; i++){
+	  exprList [i] = exprListCode [i];
+	}
+	exprList [l - 1] = exprCode;
+	RESULT = exprList; :}
+  | expression:exprCode 
+    {: ExpressionCode [] exprList = new ExpressionCode [1];
+	exprList [0] = exprCode;
+	RESULT = exprList; :} ;
+
+condition ::= condition:condCode OR andExpression:andExprCode 
+    {: 	String cond1 = condCode.code();
+	cond1 = cond1.replaceAll(condCode.trueLabel(),andExprCode.trueLabel());
+	RESULT = new ConditionCode(cond1 + andExprCode.code(),
+	andExprCode.trueLabel(),andExprCode.falseLabel()); :}
+  | andExpression:andExprCode 
+    {: RESULT = andExprCode; :} ;
+
+andExpression ::= andExpression:andExprCode AND relationalExpression:relExprCode
+    {:  String andExpr1 = andExprCode.code();
+	andExpr1 = andExpr1.replaceAll(andExprCode.falseLabel(),relExprCode.falseLabel());
+	RESULT = new ConditionCode(andExpr1 + relExprCode.code(),
+	relExprCode.trueLabel(),relExprCode.falseLabel()); :}
+  | relationalExpression:relExprCode 
+    {: RESULT = relExprCode; :} ;
+
+relationalExpression ::= 
+    expression:exprCode1 relationalOperator:op expression:exprCode2
+    {: String trueLabel = Code . newLabel ();
+	String falseLabel = Code . newLabel ();
+	RESULT = new ConditionCode(exprCode1 . code () + exprCode2 . code ()
+	+ "if(" + exprCode1 . place () + " " + op + " " 
+	+ exprCode2 . place () 
+	+ ") goto " + trueLabel + ";\n"
+        + "  goto " + falseLabel + ";\n"
+        + trueLabel + ":\n", trueLabel, falseLabel); :}
+  | expression:exprCode 
+    {: String trueLabel = Code . newLabel ();
+	String falseLabel = Code . newLabel ();
+	RESULT = new ConditionCode(exprCode . code ()
+	+ "if(" + exprCode . place ()
+	+ ") goto " + trueLabel + ";\n"
+        + "  goto " + falseLabel + ";\n"
+        + trueLabel + ":\n", trueLabel, falseLabel); :} ;
+
+relationalOperator ::= 
+    LT {: RESULT = "<"; :}
+  | LE {: RESULT = "<="; :}
+  | GT {: RESULT = ">"; :}
+  | GE {: RESULT = ">="; :}
+  | EQ {: RESULT = "=="; :}
+  | NE {: RESULT = "!="; :} ;
+
+expression ::= term:termCode 
+    {: RESULT = termCode; :}
+  | expression:exprCode addingOperator:op term:termCode 
+    {: String exprTemp = Code . newTemp();
+	env . enterVar (exprTemp, new IntegerType () );
+	RESULT = new ExpressionCode ( exprCode . code () + termCode . code ()
+	+ exprTemp + " = " + exprCode . place () + " " + op + " "
+	+ termCode . place () + ";\n", exprTemp); :} ;
+
+addingOperator ::= PLUS {: RESULT = "+"; :} | MINUS {: RESULT = "-"; :};
+
+term ::= factor:factCode
+    {: RESULT = factCode; :}
+  | term:termCode multiplyingOperator:op factor:factCode
+    {: String termTemp = Code . newTemp ();
+	env . enterVar (termTemp, new IntegerType () );
+	RESULT = new ExpressionCode (termCode . code () + factCode . code ()
+	+ " " + termTemp + " = " + termCode . place () + " " + op + " "
+	+ factCode . place () + ";\n", termTemp); 
+    :} ;
+
+multiplyingOperator ::= TIMES {: RESULT = "*"; :} 
+  | SLASH {: RESULT = "/"; :} ;
+
+factor ::= primaryExpression:primExprCode
+    {: RESULT = primExprCode; :}
+  | unaryOperator:op factor:factCode
+    {: String factTemp = Code . newTemp ();
+	env . enterVar (factTemp, new IntegerType() );
+	RESULT = new ExpressionCode(factCode . code () + factTemp + " = " + op
+	+ factCode . place () + ";\n", factTemp); :} ;
+
+unaryOperator ::= addingOperator:op {: RESULT = op; :}
+  | NOT {: RESULT = "!"; :} ;
+
+primaryExpression ::= object:obCode
+    {: RESULT = obCode; :} 
+  | INTEGER:intval
+    {: RESULT = new ExpressionCode("",intval); :} 
+  | TRUE 
+    {: RESULT = new ExpressionCode("","1"); :} 
+  | FALSE 
+    {: RESULT = new ExpressionCode("","0"); :} 
+  | LPAREN expression:exprCode RPAREN 
+    {: RESULT = exprCode; :} ;
+
+object ::= variable:varCode
+    {: RESULT = varCode; :}
+  | functionCall:funcCallCode
+    {: RESULT = funcCallCode; :} ;
+
+variable ::= THIS 
+    {: RESULT = new ExpressionCode("","_this"); :} 
+  | objectId:obId subscriptList:subListCode 
+    {: RESULT = new ExpressionCode("", obId + subListCode); :} 
+  | object:obCode DOT objectId:obId subscriptList:subListCode 
+    {: RESULT = new ExpressionCode("",obCode . place () + "."
+	+ obId + subListCode); :} ;
+
+subscriptList ::= subscriptList:subListCode LBRACK expression:exprCode RBRACK 
+    {: RESULT = subListCode + "[" + exprCode.place() + "]";  :} | ;
+
+functionCall ::= functionId:funcId LPAREN expressionListOption:exprListOptCode RPAREN 
+    {: int listLength = exprListOptCode.length;
+	if(!(env . hasEntry("_actual")))
+	  env . enterVar("_actual", new ArrayType(listLength, new IntegerType()));
+	 if(env . entry("_actual") . type() . dimension() < listLength)
+	  env . editVarType("_actual",new ArrayType(listLength, new IntegerType()));
+	String actCode = "";
+	for(int i = 0; i < listLength; i++){
+	  actCode += exprListOptCode[i] . code() + "_actual [" + i + "] = " + 
+	  exprListOptCode [i] . place() + ";\n";
+	}
+	String funcTemp = Code . newTemp ();
+	env . enterVar (funcTemp, new IntegerType() );
+	actCode += funcTemp + " = " + funcId + " (_actual);\n";
+	RESULT = new ExpressionCode (actCode,funcTemp) ; 
+    :}
+  | object:obCode DOT functionId:funcId LPAREN expressionListOption:exprListOptCode RPAREN 
+    {: int listLength = exprListOptCode.length + 1;
+	if(!(env . hasEntry("_actual")))
+	  env . enterVar("_actual", new ArrayType(listLength,new IntegerType()));
+	 if(env . entry("_actual") . type() . dimension() < listLength)
+	  env . editVarType("_actual",new ArrayType(listLength,new IntegerType()));
+	String actCode = "_actual [0] = (int) &" + obCode + ";\n";
+	for(int i = 0; i < listLength - 1; i++){
+	  actCode += exprListOptCode[i] . code() + "_actual [" + i + "] = " + 
+	  exprListOptCode [i] . place() + ";\n";
+	}
+	String funcTemp = Code . newTemp ();
+	env . enterVar (funcTemp, new IntegerType() );
+	actCode += funcTemp + " = " + funcId + " (_actual);\n";
+	RESULT = new ExpressionCode (actCode,funcTemp) ; 
+    :} ; 
+
+classId ::= ID:id {: RESULT = id; :} ;
+
+objectId ::= ID:id {: RESULT = id; :} ;
+
+functionId ::= ID:id {: RESULT = id; :} ;

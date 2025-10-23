@@ -1,0 +1,6 @@
+Code by: Alex Kesler
+
+run the make command on two seperate servers
+
+then, run ./prserver <port_number> on one for the server, and run ./prclient <IP_Adress> <port_number> <input_file> <output_file>
+on the other

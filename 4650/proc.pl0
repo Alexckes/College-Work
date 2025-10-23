@@ -1,0 +1,9 @@
+const c = 10;
+var x;
+procedure p; 
+  const x = 20; 
+  var y; 
+  begin 
+  end;
+begin 
+end.

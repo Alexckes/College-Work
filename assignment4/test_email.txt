@@ -1,0 +1,5 @@
+FROM: "Your Name" alexanderkesler@my.unt.edu
+TO: "Recipient Name" alexanderkesler@my.unt.edu
+SUBJECT: Subject of the email
+This is a test!!!
+.
